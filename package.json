@@ -1,25 +1,32 @@
 {
-    "name": "nodejs",
-    "version": "1.0.0",
-    "description": "",
-    "main": "index.js",
-    "scripts": {
-        "start": "node index.js",
-        "dev": "nodemon index.js",
-        "test": "echo \"Error: no test specified\" && exit 1"
-    },
-    "keywords": [],
-    "author": "",
-    "license": "ISC",
-    "dependencies": {
-        "@types/node": "^18.0.6",
-        "cors": "^2.8.5",
-        "dotenv": "^16.4.5",
-        "express": "^4.21.1",
-        "ffmpeg": "^0.0.4",
-        "ffmpeg-static": "^5.2.0",
-        "fs-extra": "^11.2.0",
-        "nodemon": "^3.1.7",
-        "spotify-dl": "^1.1.2"
-    }
+  "name": "nodejs",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "ts-node src/index.ts",
+    "build": "tsc",
+    "serve": "node dist/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "ffmpeg": "^0.0.4",
+    "ffmpeg-static": "^5.2.0",
+    "fs-extra": "^11.2.0",
+    "mongoose": "^8.7.3",
+    "nodemon": "^3.1.7",
+    "spotify-dl": "^1.1.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.8.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
+  }
 }

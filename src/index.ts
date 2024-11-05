@@ -40,6 +40,27 @@ const validateURL = (req: Request, res: Response, next: NextFunction) => {
     return;
   }
 };
+app.post(
+  "/api/playlists", 
+  (req: Request, res: Response, next: NextFunction) => {
+    const { accessToken } = req.body;
+    console.log(accessToken);
+    spotifyService.fetchUserPlaylists(accessToken as string)
+      .then(data => res.json(data))
+      .catch(error => res.status(500).json({ error: "Failed to fetch playlists" }));
+    
+    }
+);
+app.post(
+  "/api/playlists/tracks", 
+  (req: Request, res: Response, next: NextFunction) => {
+    const { playlistId, accessToken } = req.body;
+      spotifyService.getPlaylistTracks(playlistId as string, accessToken as string)
+      .then(data => res.json(data))
+      .catch(error => res.status(500).json({ error: "Failed to fetch playlists" }));
+    
+    }
+);
 
 app.get("/api/download/song", validateURL, (req: Request, res: Response) => {
   const { url } = req.query;
@@ -107,14 +128,3 @@ app.post(
   }
 );
 
-app.post(
-  "/api/playLists", 
-  (req: Request, res: Response, next: NextFunction) => {
-    const { accessToken } = req.body;
-    console.log(accessToken);
-    spotifyService.fetchUserPlaylists(accessToken as string)
-      .then(data => res.json(data))
-      .catch(error => res.status(500).json({ error: "Failed to fetch playlists" }));
-    
-    }
-);

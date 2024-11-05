@@ -76,34 +76,14 @@ export const fetchUserPlaylists = async (token: string) => {
     throw new Error(err instanceof Error ? err.message : "Unknown error");
   }
 };
-export const getPlaylistTracks = async (playlistId: string) => {
-  const response = await fetch(
-    `https://api.spotify.com/v1/playlists/${playlistId}/tracks`
-  );
+export const getPlaylistTracks = async (playlistId: string, token: string) => {
+  const response = await fetch( `https://api.spotify.com/v1/playlists/${playlistId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
   if (!response.ok) {
     throw new Error("Failed to fetch playlist tracks");
   }
   return response.json();
-};
-
-export const downloadPlaylist = async (playlistId: string) => {
-  const Spotify = require("spotifydl-core").default;
-  const spotify = new Spotify({
-    clientId: CLIENT_ID,
-    clientSecret: CLIENT_SECRET,
-  });
-  const tracks = await getPlaylistTracks(playlistId);
-  return tracks;
-};
-export const downloadSong = async (songUrl: string) => {
-  const Spotify = require("spotifydl-core").default;
-  console.log(CLIENT_ID, CLIENT_SECRET);
-  const spotify = new Spotify({
-    clientId: CLIENT_ID,
-    clientSecret: CLIENT_SECRET,
-  });
-  const infoTrack = await spotify.getTrackInfo(songUrl);
-  console.log(infoTrack);
-  const track = await spotify.downloadTrack(songUrl);
-  return track;
 };

@@ -7,25 +7,26 @@
     "dev": "nodemon src/index.ts",
     "start": "ts-node src/index.ts",
     "build": "tsc",
-    "serve": "node dist/index.js"
+    "serve": "node dist/index.js",
+    "init-db": "ts-node src/scripts/initDb.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/express": "^4.17.21",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "ffmpeg": "^0.0.4",
     "ffmpeg-static": "^5.2.0",
     "fs-extra": "^11.2.0",
-    "mongoose": "^8.7.3",
+    "mongoose": "^8.8.0",
     "nodemon": "^3.1.7",
     "spotify-dl": "^1.1.2"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.0",
     "@types/node": "^22.8.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.6.3"

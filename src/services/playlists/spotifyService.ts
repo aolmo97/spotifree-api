@@ -65,8 +65,6 @@ export const fetchUserPlaylists = async (token: string) => {
         Authorization: `Bearer ${token}`,
       },
     });
-    console.log("response ");
-    console.log(response);
     if (!response.ok) {
       throw new Error("Failed to fetch playlists");
     }

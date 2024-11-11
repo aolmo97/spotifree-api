@@ -5,17 +5,28 @@ import { exec } from "child_process";
 import cors from "cors";
 import * as spotifyService from "./services/playlists/spotifyService";
 import { log } from "console";
+import path from "path";
+import mongoose from "mongoose";
+import Track from "./models/Track";
+import fs from "fs/promises";
+import { join } from "path";
 
 dotenv.config();
+
+mongoose
+  .connect(process.env.MONGODB_URI || "mongodb://localhost:27017/spotifree-app")
+  .then(() => console.log("Connected to MongoDB"))
+  .catch((err) => console.error("MongoDB connection error:", err));
 
 const app: Express = express();
 const port = process.env.PORT || 3000;
 
+// Aumentar límite de payload
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
 // Add CORS middleware
 app.use(cors());
-
-// Add body parser middleware for JSON
-app.use(express.json());
 
 app.get("/", (req: Request, res: Response) => {
   res.send("hello world");
@@ -41,90 +52,184 @@ const validateURL = (req: Request, res: Response, next: NextFunction) => {
   }
 };
 app.post(
-  "/api/playlists", 
+  "/api/playlists",
   (req: Request, res: Response, next: NextFunction) => {
     const { accessToken } = req.body;
-    console.log(accessToken);
-    spotifyService.fetchUserPlaylists(accessToken as string)
-      .then(data => res.json(data))
-      .catch(error => res.status(500).json({ error: "Failed to fetch playlists" }));
-    
-    }
+    spotifyService
+      .fetchUserPlaylists(accessToken as string)
+      .then((data) => res.json(data))
+      .catch((error) =>
+        res.status(500).json({ error: "Failed to fetch playlists" })
+      );
+  }
 );
 app.post(
-  "/api/playlists/tracks", 
+  "/api/playlists/tracks",
   (req: Request, res: Response, next: NextFunction) => {
     const { playlistId, accessToken } = req.body;
-      spotifyService.getPlaylistTracks(playlistId as string, accessToken as string)
-      .then(data => res.json(data))
-      .catch(error => res.status(500).json({ error: "Failed to fetch playlists" }));
-    
-    }
+    spotifyService
+      .getPlaylistTracks(playlistId as string, accessToken as string)
+      .then((data) => res.json(data))
+      .catch((error) =>
+        res.status(500).json({ error: "Failed to fetch playlists" })
+      );
+  }
 );
 
-app.get("/api/download/song", validateURL, (req: Request, res: Response) => {
-  const { url } = req.query;
-  console.log(url);
-  exec(`spotdl ${url} --output ./audios`, (error, stdout, stderr) => {
-    if (error) {
-      console.error(`exec error: ${error}`);
-      return res.status(500).send("Error processing request");
-    }
-    res.json({ success: true, message: "Song downloaded successfully" });
-  });
-});
+app.post("/api/download/song", async (req: Request, res: Response) => {
+  const trackData = req.body;
+  const desiredFilename = `${trackData.id}.mp3`;
+  console.log("trackData:", trackData);
+  console.log("Downloading song...");
 
-app.post(
-  "/api/download/playlist",
-  (req: Request, res: Response) => {
-    const { url } = req.body;
-    console.log("playlistURL:", url);
-    
-    let outputData = '';
-    
-    exec(`spotdl ${url} --output ./audios`, (error, stdout, stderr) => {
+  exec(
+    `spotdl ${trackData.url} --output ./audios/`,
+    async (error, stdout, stderr) => {
       if (error) {
         console.error(`exec error: ${error}`);
         return res.status(500).send("Error processing request");
       }
-      
-      // Guardamos la salida del comando y la logeamos
-      outputData = stdout;
-      console.log("Script output:", outputData);
-      console.log("stderr:", stderr); // Agregamos log del stderr
 
-      // Verificamos que el directorio existe
-      exec('dir .\\audios', (err, dirOutput) => {
-        console.log("Directory contents:", dirOutput); // Log del contenido del directorio
-        
-        exec('dir /b /a-d .\\audios', (err, filesOutput) => {
-          if (err) {
-            console.error(`Error listing files: ${err}`);
-            return res.status(500).send("Error listing downloaded files");
+      try {
+        // Leer el directorio
+        const files = await fs.readdir("./audios");
+        const audioFiles = files.filter((file) => file.endsWith(".mp3"));
+
+        if (audioFiles.length === 0) {
+          return res.status(500).send("No MP3 files found");
+        }
+
+        const lastFile = audioFiles[audioFiles.length - 1];
+        const oldPath = join(process.cwd(), "audios", lastFile);
+        const newPath = join(process.cwd(), "audios", desiredFilename);
+
+        // Renombrar el archivo
+        await fs.rename(oldPath, newPath);
+
+        const audioUrl = `${process.env.MEDIA_SERVER_URL}/audios/${desiredFilename}`;
+
+        const track = await Track.create({
+          id: trackData.id,
+          name: trackData.name,
+          preview_url: trackData.preview_url,
+          duration_ms: trackData.duration_ms,
+          album: trackData.album,
+          artists: trackData.artists,
+          href: audioUrl,
+          filename: desiredFilename,
+        });
+
+        console.log("Track created:", track);
+        res.json({
+          success: true,
+          message: "Song downloaded successfully",
+          file: track,
+        });
+      } catch (error) {
+        console.error(`Error renaming file: ${error}`);
+        return res.status(500).send("Error renaming downloaded file");
+      }
+    }
+  );
+});
+
+app.post("/api/download/playlist", async (req: Request, res: Response) => {
+  const { url, songs } = req.body;
+
+  console.log("Downloading playlist with url:", url);
+
+  exec(`spotdl ${url} --output ./audios/`, async (error, stdout, stderr) => {
+    if (error) {
+      console.error(`exec error: ${error}`);
+      return res.status(500).send("Error processing request");
+    }
+
+    try {
+      // Procesar las canciones de forma secuencial
+      for (const song of songs) {
+        try { 
+          // Leer el directorio
+          const files = await fs.readdir("./audios");
+          const audioFiles = files.filter((file) => file.endsWith(".mp3"));
+
+          if (audioFiles.length === 0) {
+            console.log("No MP3 files found for song:", song.name);
+            continue;
           }
 
-          console.log("Files output:", filesOutput); // Log de la lista de archivos
+          const desiredFilename = `${song.id}.mp3`;
+          console.log("Processing song:", song.name, "->", desiredFilename);
 
-          // Creamos un array con las URLs relativas de los archivos
-          const audioFiles = filesOutput
-            .trim()
-            .split('\r\n')
-            .filter(file => file.endsWith('.mp3'));
-          
-          console.log("Audio files found:", audioFiles); // Log de los archivos encontrados
+          // Buscar el archivo que corresponde a esta canción
+          const songFile = audioFiles.find(
+            (file) =>
+              file.toLowerCase().includes(song.name.toLowerCase()) ||
+              file.toLowerCase().includes(song.artists[0].name.toLowerCase())
+          );
 
-          const audioUrls = audioFiles.map(file => `/audios/${file}`);
-          console.log("Audio URLs:", audioUrls); // Log de las URLs generadas
+          if (!songFile) {
+            console.log("Could not find matching file for song:", song.name);
+            continue;
+          }
 
-          res.json({ 
-            success: true, 
-            message: "Playlist downloaded successfully",
-            scriptOutput: outputData,
-            files: audioUrls
+          const oldPath = join(process.cwd(), "audios", songFile);
+          const newPath = join(process.cwd(), "audios", desiredFilename);
+
+          // Renombrar el archivo
+          await fs.rename(oldPath, newPath);
+
+          const audioUrl = `${process.env.MEDIA_SERVER_URL}/audios/${desiredFilename}`;
+
+          const track = await Track.create({
+            id: song.id,
+            name: song.name,
+            href: audioUrl,
+            preview_url: song.preview_url,
+            duration_ms: song.duration_ms,
+            album: song.album.name,
+            artist: song.artists,
+            image: song.album.images[0].url,
           });
-        });
+          console.log("Track created:", track);
+        } catch (songError) {
+          console.error(`Error processing song ${song.name}:`, songError);
+          // Continuar con la siguiente canción en caso de error
+        }
+      }
+
+      res.json({
+        success: true,
+        message: "Playlist processed successfully",
       });
-    });
+    } catch (error) {
+      console.error(`Error processing playlist:`, error);
+      return res.status(500).send("Error processing playlist");
+    }
+  });
+});
+
+app.get(
+  "/api/song/:songId",
+  async (
+    req: Request<{ songId: string }, any, any, any>,
+    res: Response<any>
+  ) => {
+    try {
+      const { songId } = req.params;
+      console.log("songId:", songId);
+
+      const track = await Track.findOne({ id: songId });
+      console.log("track:", track);
+      if (!track) {
+        return res.status(404).json({ error: "Track not found" });
+      }
+
+      res.json(track);
+    } catch (error) {
+      console.error("Error fetching track:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
   }
 );
 
+app.use("/audios", express.static(path.join(__dirname, "../audios")));

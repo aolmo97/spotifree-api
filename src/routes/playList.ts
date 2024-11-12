@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import { SpotifyDownloader } from '../services/spotifyDownloader';
 import { Song } from '../models/Song';
-import { Playlist } from '../models/Playlist';
+import { Playlist } from '../models/PlayList';
 import { SpotifyPlaylistData } from '../types';
 
 const router = express.Router();

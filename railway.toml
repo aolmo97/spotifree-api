@@ -1,6 +1,6 @@
 [build]
 builder = "nixpacks"
-buildCommand = "npm install"
+buildCommand = "npm install && npm run build"
 
 [deploy]
 startCommand = "npm start"
@@ -8,4 +8,7 @@ healthcheckPath = "/"
 healthcheckTimeout = 100
 
 [nixpacks]
-install = ["python3", "ffmpeg", "spotdl"]
+install = ["python3", "ffmpeg", "python3-pip"]
+setup = [
+  "pip install spotdl"
+]

@@ -2,12 +2,17 @@ FROM node:18-slim
 
 # Instalar dependencias del sistema
 RUN apt-get update && apt-get install -y \
-    python3 \
+    python3-full \
     python3-pip \
+    python3-venv \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-# Instalar spotdl
+# Crear y activar entorno virtual
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Instalar spotdl en el entorno virtual
 RUN pip3 install --no-cache-dir --upgrade pip && \
     pip3 install --no-cache-dir spotdl && \
     spotdl --download-ffmpeg
@@ -15,7 +20,7 @@ RUN pip3 install --no-cache-dir --upgrade pip && \
 WORKDIR /app
 
 # Crear directorio de audios
-RUN mkdir -p /app/audios
+RUN mkdir -p /app/audios && chmod 777 /app/audios
 
 # Copiar archivos del proyecto
 COPY package*.json ./

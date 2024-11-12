@@ -5,10 +5,11 @@
   "main": "src/index.ts",
   "scripts": {
     "dev": "nodemon src/index.ts",
-    "start": "ts-node src/index.ts",
+    "start": "node dist/index.js",
     "build": "tsc",
     "serve": "node dist/index.js",
-    "init-db": "ts-node src/scripts/initDb.ts"
+    "init-db": "ts-node src/scripts/initDb.ts",
+    "postinstall": "npm run build"
   },
   "keywords": [],
   "author": "",
@@ -30,5 +31,8 @@
     "@types/node": "^22.8.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

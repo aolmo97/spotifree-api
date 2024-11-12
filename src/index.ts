@@ -10,16 +10,45 @@ import mongoose from "mongoose";
 import Track from "./models/Track";
 import fs from "fs/promises";
 import { join } from "path";
+import { mkdir } from 'fs/promises';
 
 dotenv.config();
 
-mongoose
-  .connect(process.env.MONGODB_URI || "mongodb://localhost:27017/spotifree-app")
-  .then(() => console.log("Connected to MongoDB"))
-  .catch((err) => console.error("MongoDB connection error:", err));
+// Asegurarse que las carpetas existan
+async function initializeApp() {
+  // Crear carpeta de audios si no existe
+  try {
+    await mkdir('./audios', { recursive: true });
+  } catch (error) {
+    console.log('Audios directory already exists or error creating it');
+  }
+
+  // Conexión a MongoDB con retry
+  const connectDB = async (retries = 5) => {
+    try {
+      await mongoose.connect(process.env.MONGODB_URI || "mongodb://localhost:27017/spotifree-app");
+      console.log("Connected to MongoDB");
+    } catch (err) {
+      if (retries > 0) {
+        console.log(`MongoDB connection failed. Retrying... (${retries} attempts left)`);
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        return connectDB(retries - 1);
+      }
+      console.error("MongoDB connection error:", err);
+      process.exit(1);
+    }
+  };
+
+  await connectDB();
+
+  // Iniciar servidor
+  app.listen(port, '0.0.0.0', () => {
+    console.log(`[server]: Server is running at http://localhost:${port}`);
+  });
+}
 
 const app: Express = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 // Aumentar límite de payload
 app.use(express.json({ limit: "50mb" }));
@@ -32,9 +61,8 @@ app.get("/", (req: Request, res: Response) => {
   res.send("hello world");
 });
 
-app.listen(port, () => {
-  console.log(`[server]: Server is running at http://localhost:${port}`);
-});
+// Llamar a la función de inicialización
+initializeApp().catch(console.error);
 
 // Middleware to validate URLs
 const validateURL = (req: Request, res: Response, next: NextFunction) => {

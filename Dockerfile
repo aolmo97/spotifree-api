@@ -12,14 +12,16 @@ RUN apt-get update && apt-get install -y \
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Instalar spotdl en el entorno virtual
+# Instalar spotdl en el entorno virtual (sin descargar ffmpeg ya que ya está instalado)
 RUN pip3 install --no-cache-dir --upgrade pip && \
-    pip3 install --no-cache-dir spotdl && \
-    spotdl --download-ffmpeg
+    pip3 install --no-cache-dir spotdl
+
+# Verificar instalación
+RUN spotdl --version
 
 WORKDIR /app
 
-# Crear directorio de audios
+# Crear directorio de audios con permisos correctos
 RUN mkdir -p /app/audios && chmod 777 /app/audios
 
 # Copiar archivos del proyecto
